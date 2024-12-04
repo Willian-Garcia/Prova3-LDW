@@ -10,15 +10,27 @@ class ReservaController {
                 return res.status(400).json({ message: "Todos os campos são obrigatórios." });
             }
 
+            const horariosPadrao = [
+                "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
+                "14:00", "15:00", "16:00", "17:00", "18:00",
+                "19:00", "20:00", "21:00", "22:00"
+            ];
+
+            if (!horariosPadrao.includes(horario)) {
+                return res.status(400).json({
+                    message: "O horário informado não está dentro do intervalo permitido pelo restaurante (08:00 - 22:00)."
+                });
+            }
+
             const dataReserva = new Date(data);
             const [hora, minuto] = horario.split(":" ).map(Number);
             dataReserva.setHours(hora, minuto, 0, 0);
 
             const inicioIntervalo = new Date(dataReserva);
-            inicioIntervalo.setHours(inicioIntervalo.getHours() - 2);
+            inicioIntervalo.setHours(inicioIntervalo.getHours() - 1);
 
             const fimIntervalo = new Date(dataReserva);
-            fimIntervalo.setHours(fimIntervalo.getHours() + 2);
+            fimIntervalo.setHours(fimIntervalo.getHours() + 1);
 
             const reservaExistente = await Reserva.findOne({
                 mesa: Number(mesa),
@@ -106,6 +118,18 @@ class ReservaController {
                 return res.status(400).json({ message: "ID da reserva é obrigatório." });
             }
 
+            const horariosPadrao = [
+                "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
+                "14:00", "15:00", "16:00", "17:00", "18:00",
+                "19:00", "20:00", "21:00", "22:00"
+            ];
+
+            if (!horariosPadrao.includes(horario)) {
+                return res.status(400).json({
+                    message: "O horário informado não está dentro do intervalo permitido pelo restaurante (08:00 - 22:00)."
+                });
+            }
+
             const reservaAtualizada = await Reserva.findByIdAndUpdate(
                 id,
                 { nome, mesa, status: "Reservado", data, contato, horario },
@@ -150,27 +174,27 @@ class ReservaController {
     static async verificarDisponibilidade(req: Request, res: Response): Promise<Response> {
         try {
             const { mesa, data, horario } = req.query;
-
+    
             if (!mesa || !data || !horario) {
                 return res.status(400).json({ message: "Mesa, data e horário são obrigatórios." });
             }
-
+    
             const reservas = await Reserva.find({
                 mesa: Number(mesa),
                 data: new Date(data as string),
                 horario: horario as string,
             });
-
+    
             if (reservas.length > 0) {
                 return res.status(200).json({ status: reservas[0].status });
             }
-
+    
             return res.status(200).json({ status: "Disponível" });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: "Erro ao verificar disponibilidade." });
         }
     }
-}
+}    
 
 export default ReservaController;

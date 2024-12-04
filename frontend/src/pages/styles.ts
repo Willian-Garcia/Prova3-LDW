@@ -118,21 +118,17 @@ export const Input = styled.input`
   text-align: center;
 `;
 
-export const SelectInput = styled.select`
-  display: block;
+export const Dropdown = styled.select`
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: none;
-  border-radius: 10px;
-  text-align: center;
-  background-color: #ffffff;
-  font-size: 14px;
+  padding: 8px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+`;
 
-  &:focus {
-    outline: none;
-    border: 2px solid #00c9bd;
-  }
+export const DropdownOption = styled.option`
+  font-size: 16px;
 `;
 
 export const SearchInput = styled.input`

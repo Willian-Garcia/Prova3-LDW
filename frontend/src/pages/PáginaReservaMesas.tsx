@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Para chamadas à API
+import axios from "axios";
 import {
   Button,
   Container,
@@ -13,8 +13,9 @@ import {
   Label,
   LabelTitle,
   SearchInput,
-  SelectInput,
   UpdateButton,
+  Dropdown,
+  DropdownOption,
 } from "./styles";
 import { format } from "date-fns";
 import { Reserva } from "../types";
@@ -28,7 +29,7 @@ const ReservaDeMesas: React.FC = () => {
   const [horario, setHorario] = useState("");
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [filteredReservas, setFilteredReservas] = useState<Reserva[]>([]);
-  const [searchTerm, setSearchTerm] = useState(""); // Barra de pesquisa
+  const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -37,7 +38,6 @@ const ReservaDeMesas: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Filtrar reservas com base no nome
     const filtered = reservas.filter((reserva) =>
       reserva.nome.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -48,7 +48,7 @@ const ReservaDeMesas: React.FC = () => {
     try {
       const response = await axios.get("http://localhost:3010/reserva");
       setReservas(response.data);
-      setFilteredReservas(response.data); // Inicializa lista filtrada
+      setFilteredReservas(response.data);
     } catch (error) {
       console.error("Erro ao buscar reservas:", error);
       setError("Erro ao carregar reservas.");
@@ -56,47 +56,41 @@ const ReservaDeMesas: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!nome || !mesa || !status || !data || !contato || !horario) {
+    if (!nome || !mesa || !data || !contato || !horario) {
       setError("Todos os campos são obrigatórios.");
       return;
     }
 
     try {
+      const reservaData = {
+        nome,
+        mesa: Number(mesa),
+        status,
+        data: new Date(data).toISOString(),
+        contato,
+        horario,
+      };
+
+      console.log("Payload enviado:", reservaData);
+
       if (editingId) {
-        // Atualizar reserva existente
-        const response = await axios.put(`http://localhost:3010/reserva/${editingId}`, {
-          nome,
-          mesa,
-          status,
-          data,
-          contato,
-          horario,
-        });
+        const response = await axios.put(`http://localhost:3010/reserva/${editingId}`, reservaData);
         setReservas(
           reservas.map((reserva) =>
             reserva._id === editingId ? response.data : reserva
           )
         );
       } else {
-        // Criar nova reserva
-        const response = await axios.post("http://localhost:3010/reserva", {
-          nome,
-          mesa,
-          status,
-          data,
-          contato,
-          horario,
-        });
+        const response = await axios.post("http://localhost:3010/reserva", reservaData);
         setReservas([...reservas, response.data]);
       }
 
-      // Resetar os campos
       setNome("");
       setMesa("");
-      setStatus("Reservado");
       setData("");
       setContato("");
       setHorario("");
+      setStatus("Reservado");
       setEditingId(null);
       setError("");
     } catch (error) {
@@ -105,13 +99,13 @@ const ReservaDeMesas: React.FC = () => {
     }
   };
 
-  const handleEditReserva = (reserva: any) => {
+  const handleEditReserva = (reserva: Reserva) => {
     setNome(reserva.nome);
     setMesa(reserva.mesa);
-    setStatus(reserva.status);
-    setData(reserva.data);
+    setData(reserva.data.split("T")[0]);
     setContato(reserva.contato);
     setHorario(reserva.horario);
+    setStatus(reserva.status);
     setEditingId(reserva._id);
   };
 
@@ -159,20 +153,16 @@ const ReservaDeMesas: React.FC = () => {
           value={mesa}
           onChange={(e) => setMesa(Number(e.target.value))}
         />
-        <SelectInput value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="Reservado">Reservado</option>
-          <option value="Ocupado">Ocupado</option>
-          <option value="Disponível">Disponível</option>
-        </SelectInput>
-
-
-
+        <Dropdown value={status} onChange={(e) => setStatus(e.target.value)}>
+          <DropdownOption value="Reservado">Reservado</DropdownOption>
+          <DropdownOption value="Disponível">Disponível</DropdownOption>
+          <DropdownOption value="Cancelado">Cancelado</DropdownOption>
+        </Dropdown>
         {error && <Label style={{ color: "red" }}>{error}</Label>}
         <Button onClick={handleSubmit}>
           {editingId ? "Atualizar Reserva" : "Cadastrar Reserva"}
         </Button>
       </EventForm>
-
 
       <EventList>
         <EventListHeader>
@@ -185,24 +175,30 @@ const ReservaDeMesas: React.FC = () => {
           <LabelTitle>Total de Reservas: {reservas.length}</LabelTitle>
         </EventListHeader>
         <EventListScroll>
-          {filteredReservas.map((reserva) => (
-            <EventItem key={reserva._id}>
-              <Label>Nome: {reserva.nome}</Label>
-              <Label>Mesa: {reserva.mesa}</Label>
-              <Label>Status: {reserva.status}</Label>
-              <Label>Data: {format(new Date(reserva.data), "dd/MM/yyyy")}</Label>
-              <Label>Contato: {reserva.contato}</Label>
-              <Label>Horário: {reserva.horario}</Label>
-              <div>
-                <UpdateButton onClick={() => handleEditReserva(reserva)}>
-                  Alterar
-                </UpdateButton>
-                <DeleteButton onClick={() => handleDeleteReserva(reserva._id)}>
-                  Excluir
-                </DeleteButton>
-              </div>
-            </EventItem>
-          ))}
+          {filteredReservas.map((reserva) => {
+            const dataValida = reserva.data ? new Date(reserva.data) : null;
+
+            return (
+              <EventItem key={reserva._id}>
+                <Label>Nome: {reserva.nome}</Label>
+                <Label>Mesa: {reserva.mesa}</Label>
+                <Label>Status: {reserva.status}</Label>
+                <Label>
+                  Data: {dataValida ? format(dataValida, "dd/MM/yyyy") : "Data inválida"}
+                </Label>
+                <Label>Contato: {reserva.contato}</Label>
+                <Label>Horário: {reserva.horario || "Horário inválido"}</Label>
+                <div>
+                  <UpdateButton onClick={() => handleEditReserva(reserva)}>
+                    Alterar
+                  </UpdateButton>
+                  <DeleteButton onClick={() => handleDeleteReserva(reserva._id)}>
+                    Excluir
+                  </DeleteButton>
+                </div>
+              </EventItem>
+            );
+          })}
         </EventListScroll>
       </EventList>
     </Container>
